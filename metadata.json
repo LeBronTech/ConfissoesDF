@@ -1,0 +1,6 @@
+{
+  "name": "Horários de Confissão - DF",
+  "description": "Consulta de horários de confissão em paróquias e capelas do Distrito Federal com sistema de 7 blocos diários.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

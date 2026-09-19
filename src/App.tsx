@@ -9,7 +9,12 @@ import { WeeklyScheduleGrid } from './components/WeeklyScheduleGrid';
 import { CityMultiSelect } from './components/CityMultiSelect';
 import { parishData } from './data';
 import { DayOfWeek, DAYS_LIST } from './types';
-import { PeriodFilter, matchesPeriod } from './utils/scheduleParser';
+import {
+  PeriodFilter,
+  matchesPeriod,
+  getCurrentDayOfWeek,
+  getCurrentPeriod,
+} from './utils/scheduleParser';
 import {
   Church,
   Search,
@@ -24,13 +29,19 @@ import {
   Info,
   CheckCircle2,
   Clock,
+  AlertCircle,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function App() {
+  const currentDayOfWeek = getCurrentDayOfWeek();
+  const currentPeriod = getCurrentPeriod();
+
   const [search, setSearch] = useState('');
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
-  const [day, setDay] = useState<DayOfWeek | 'Todos'>('Todos');
-  const [period, setPeriod] = useState<PeriodFilter>('Todos');
+  // Automatically pre-determine and select current day & period
+  const [day, setDay] = useState<DayOfWeek | 'Todos'>(() => getCurrentDayOfWeek());
+  const [period, setPeriod] = useState<PeriodFilter>(() => getCurrentPeriod());
   const [viewMode, setViewMode] = useState<'cards' | '7blocks'>('cards');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -156,6 +167,52 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
         {/* Filter Box */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-5 sm:p-6 mb-8 backdrop-blur-sm">
+          {/* Automatic Identification Banner */}
+          <div className="mb-5 p-3 bg-blue-50/90 border border-blue-200/90 rounded-xl flex items-center justify-between flex-wrap gap-2 text-xs text-blue-950">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+              </span>
+              <div>
+                <span className="font-bold">Dia e Período Identificados: </span>
+                <span className="font-semibold text-blue-900">
+                  {DAYS_LIST.find((d) => d.id === currentDayOfWeek)?.label} • {currentPeriod}
+                </span>
+                <span className="text-blue-700 ml-1.5 hidden md:inline font-normal">
+                  (pré-selecionados automaticamente)
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {(day !== currentDayOfWeek || period !== currentPeriod) && (
+                <button
+                  onClick={() => {
+                    setDay(currentDayOfWeek);
+                    setPeriod(currentPeriod);
+                  }}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[11px] transition-all flex items-center gap-1 shadow-2xs"
+                  title="Restaurar filtro para hoje e período atual"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Hoje & Agora
+                </button>
+              )}
+              {(day !== 'Todos' || period !== 'Todos') && (
+                <button
+                  onClick={() => {
+                    setDay('Todos');
+                    setPeriod('Todos');
+                  }}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-semibold text-[11px] transition-all"
+                  title="Ver todos os dias e períodos"
+                >
+                  Ver Todos os Dias
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Top Filter Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
             {/* Search Input */}
@@ -205,7 +262,7 @@ export default function App() {
                 <option value="Todos">Todos os 7 Dias</option>
                 {DAYS_LIST.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.label}
+                    {d.label} {d.id === currentDayOfWeek ? '• (Hoje)' : ''}
                   </option>
                 ))}
               </select>
@@ -223,9 +280,15 @@ export default function App() {
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-800"
               >
                 <option value="Todos">Todos os Períodos</option>
-                <option value="Manhã">🌅 Manhã (até 12h59)</option>
-                <option value="Tarde">☀️ Tarde (13:00 - 18:00)</option>
-                <option value="Noite">🌙 Noite (a partir das 18:00)</option>
+                <option value="Manhã">
+                  🌅 Manhã (até 12h59) {currentPeriod === 'Manhã' ? '• (Agora)' : ''}
+                </option>
+                <option value="Tarde">
+                  ☀️ Tarde (13:00 - 18:00) {currentPeriod === 'Tarde' ? '• (Agora)' : ''}
+                </option>
+                <option value="Noite">
+                  🌙 Noite (a partir das 18:00) {currentPeriod === 'Noite' ? '• (Agora)' : ''}
+                </option>
               </select>
             </div>
           </div>
@@ -245,21 +308,32 @@ export default function App() {
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  Todos os Dias
+                  Todos
                 </button>
-                {DAYS_LIST.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => setDay(d.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                      day === d.id
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {d.shortLabel}
-                  </button>
-                ))}
+                {DAYS_LIST.map((d) => {
+                  const isCurrent = d.id === currentDayOfWeek;
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => setDay(d.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+                        day === d.id
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{d.shortLabel}</span>
+                      {isCurrent && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            day === d.id ? 'bg-amber-300' : 'bg-blue-600'
+                          }`}
+                          title="Hoje"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="h-4 w-px bg-slate-200 mx-1 hidden md:block" />
@@ -269,19 +343,30 @@ export default function App() {
                 <span className="text-xs font-bold text-slate-500 mr-1 hidden sm:inline-block">
                   Período:
                 </span>
-                {(['Todos', 'Manhã', 'Tarde', 'Noite'] as PeriodFilter[]).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                      period === p
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {p === 'Todos' ? 'Qualquer Horário' : p}
-                  </button>
-                ))}
+                {(['Todos', 'Manhã', 'Tarde', 'Noite'] as PeriodFilter[]).map((p) => {
+                  const isCurrent = p === currentPeriod;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setPeriod(p)}
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+                        period === p
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{p === 'Todos' ? 'Qualquer' : p}</span>
+                      {isCurrent && p !== 'Todos' && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            period === p ? 'bg-amber-300' : 'bg-indigo-600'
+                          }`}
+                          title="Agora"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -338,7 +423,7 @@ export default function App() {
         </div>
 
         {/* Results Info & Active Filters Badge Bar */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-slate-900">
               {filteredParishes.length} {filteredParishes.length === 1 ? 'Paróquia Encontrada' : 'Paróquias Encontradas'}
@@ -351,8 +436,16 @@ export default function App() {
           </div>
 
           <div className="text-xs text-slate-500 hidden sm:block">
-            {viewMode === 'cards' ? 'Exibindo cartões com blocos de 7 dias' : 'Exibindo grade semanal em 7 blocos'}
+            {viewMode === 'cards' ? 'Exibindo cartões com blocos diários' : 'Exibindo grade semanal em 7 blocos'}
           </div>
+        </div>
+
+        {/* Global Guidance Notice */}
+        <div className="mb-6 p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-start sm:items-center gap-3 text-amber-950 text-xs sm:text-sm font-medium shadow-2xs">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+          <p>
+            <strong className="font-bold">Aviso importante:</strong> Consulte a paróquia pelo WhatsApp, Instagram ou telefone para confirmar os horários antes de se deslocar.
+          </p>
         </div>
 
         {/* Dynamic Display based on View Mode */}
@@ -383,14 +476,27 @@ export default function App() {
             <Church className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-slate-800 mb-1">Nenhuma paróquia encontrada</h3>
             <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
-              Não encontramos resultados para a combinação de filtros selecionada. Tente limpar os filtros para visualizar todas as opções.
+              Não encontramos confissões para a combinação de filtros selecionada (
+              <span className="font-semibold">{DAYS_LIST.find((d) => d.id === day)?.label || 'Todos'}</span> •{' '}
+              <span className="font-semibold">{period}</span>).
             </p>
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition"
-            >
-              Limpar Todos os Filtros
-            </button>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <button
+                onClick={() => {
+                  setDay('Todos');
+                  setPeriod('Todos');
+                }}
+                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition shadow-sm"
+              >
+                Ver Todos os Dias e Horários
+              </button>
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-xl text-sm hover:bg-slate-200 transition border border-slate-200"
+              >
+                Limpar Todos os Filtros
+              </button>
+            </div>
           </div>
         )}
       </main>

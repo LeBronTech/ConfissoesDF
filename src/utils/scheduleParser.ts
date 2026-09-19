@@ -2,6 +2,46 @@ import { Parish, DayOfWeek, DAYS_LIST, DayScheduleGroup, DailyScheduleEntry } fr
 
 export type PeriodFilter = 'Todos' | 'Manhã' | 'Tarde' | 'Noite';
 
+export function getCurrentDayOfWeek(): DayOfWeek {
+  const dayIndex = new Date().getDay();
+  const map: Record<number, DayOfWeek> = {
+    0: 'domingo',
+    1: 'segunda',
+    2: 'terca',
+    3: 'quarta',
+    4: 'quinta',
+    5: 'sexta',
+    6: 'sabado',
+  };
+  return map[dayIndex] || 'domingo';
+}
+
+export function getCurrentPeriod(): PeriodFilter {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes();
+  // Manhã: até 12h59 (< 13h00 / 780 min)
+  if (totalMinutes < 780) {
+    return 'Manhã';
+  }
+  // Tarde: 13h00 até 18h00 (780 a 1080 min)
+  if (totalMinutes <= 1080) {
+    return 'Tarde';
+  }
+  // Noite: após 18h00 (> 1080 min)
+  return 'Noite';
+}
+
+export function reorderDaysWithTargetFirst(
+  groups: DayScheduleGroup[],
+  targetDay: DayOfWeek
+): DayScheduleGroup[] {
+  const targetIndex = groups.findIndex((g) => g.day === targetDay);
+  if (targetIndex === -1) return groups;
+  const target = groups[targetIndex];
+  const remaining = groups.filter((g) => g.day !== targetDay);
+  return [target, ...remaining];
+}
+
 export function matchesPeriod(scheduleText: string, period: PeriodFilter): boolean {
   if (period === 'Todos') return true;
 
